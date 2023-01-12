@@ -64,6 +64,10 @@ summary(av_cat)
 discretising average  rating turn it heavily unbalanced. 
 
 ```{r}
+prop.table(table(av_cat))
+```
+
+```{r}
 
 ```
 
