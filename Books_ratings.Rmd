@@ -36,7 +36,7 @@ attach(data)
 hist(average_rating,breaks = 100)
 ```
 ```{r}
-summary(average_ratings)
+summary(average_rating)
 ```
 
 
@@ -56,5 +56,9 @@ hist(ratings_count, breaks = 50)
 av_cut <- cut(average_rating,breaks = c(0,2.7,4.5,5),include.lowest = T,
                right = T)
 plot(av_cut)
+```
+
+```{r}
+
 ```
 
