@@ -61,7 +61,7 @@ plot(av_cat)
 ```{r}
 summary(av_cat)
 ```
-discretising average  rating turn it  is heavily unbalanced. 
+discretising average  rating turn it heavily unbalanced. 
 
 ```{r}
 
