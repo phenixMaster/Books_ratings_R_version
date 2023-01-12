@@ -18,3 +18,11 @@ library(tidyverse)
 library(skimr)
 ```
 
+```{r load data}
+data <- read_csv("books.csv")
+```
+
+```{r}
+
+```
+
