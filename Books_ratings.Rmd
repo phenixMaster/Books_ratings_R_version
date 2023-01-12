@@ -53,10 +53,15 @@ hist(ratings_count, breaks = 50)
 ```
 
 ```{r}
-av_cut <- cut(average_rating,breaks = c(0,2.7,4.5,5),include.lowest = T,
+av_cat <- cut(average_rating,breaks = c(0,2.7,4.5,5),include.lowest = T,
                right = T)
-plot(av_cut)
+plot(av_cat)
 ```
+
+```{r}
+summary(av_cat)
+```
+discretising average  rating turn it  is heavily unbalanced. 
 
 ```{r}
 
