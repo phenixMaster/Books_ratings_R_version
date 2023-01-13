@@ -67,6 +67,9 @@ discretising average  rating turn it heavily unbalanced.
 prop.table(table(av_cat))
 ```
 
+Above 97% of average rating are between 2.7 and 4.5.  
+
+categorical variable 
 ```{r}
 
 ```
