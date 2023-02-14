@@ -1,0 +1,197 @@
+---
+title: "Book_ratings : Data  wrangling and EDA 17_01_2022"
+format: revealjs
+editor: visual
+---
+
+## Context or pb :
+
+We have been instructed to predict books ratings from historical data provided
+
+-   Pb : how to predict book ratings with machine learning ?
+-   hypothesis : build predictive model/ application with enough generalizing power to predict almost any given book rating.
+
+## Load data and inspect data
+
+```{r, message = FALSE }
+library(tidyverse)
+library(skimr)
+
+data <- read_csv("books.csv")
+
+cat(" There are somme misc dates (2) and a heading whitespace before num_pages to fix")
+
+
+cat("lets do 1D EDA : feature type and distribution characterisation")
+
+```
+
+## data inspection
+
+### na check
+
+```{r attach_data}
+attach(data)
+cat("there is no  NA in data") 
+
+hist(average_rating,breaks = 100)
+
+cat(" Summary average rating")
+summary(average_rating)
+```
+
+## num_pages
+
+```{r }
+summary(num_pages)
+
+hist(text_reviews_count, breaks = 50)
+```
+
+## text_reviews_count
+
+```{r text reviews count}
+summary(text_reviews_count)
+hist(text_reviews_count, breaks = 50)
+```
+
+## ratings count
+
+```{r ratings count}
+summary(ratings_count)
+
+hist(ratings_count, breaks = 50)
+```
+
+## turn av rating to discrete var
+
+```{r categorizing_average_ratings}
+av_cat <- cut(average_rating,breaks = c(0,2.7,4.5,5),include.lowest = T,
+               right = T)
+plot(av_cat,main = "categorized average ratings")
+
+round(prop.table(table(av_cat)),2)
+cat("discretizing average rating turn it heavily unbalanced.")
+```
+
+## if average rating is categorical ?
+
+-   we need to fix unbalanced data issue
+-   the pb becomes a multi class classification pb
+
+## categorical variables
+
+```{r}
+cat_data <- data %>% 
+    discard(is.numeric)
+#head(cat_data)
+names(cat_data)
+```
+
+## what are the 5 high rated titles?
+
+```{r}
+cat("number of unique titles : ",length(unique(title )))
+
+
+
+cat(" 5 most high rated titles :")
+data %>% 
+  select(title,average_rating) %>% 
+  arrange(desc(average_rating)) %>% 
+  select(title) %>% 
+  head(5) 
+```
+
+## who are the the 5 authors with high rated books ?
+
+```{r authors}
+data %>% 
+  select(authors,average_rating) %>% 
+  group_by(authors) %>% 
+   summarize(num_authors = n(), mean_av_ratin = mean(average_rating)) %>% 
+  arrange (desc(num_authors)) %>% 
+  head(5)
+```
+
+P.G. Wodehouse is the highest prolific author.
+
+## Which languages occurs the most ?
+
+```{r languages_code}
+data %>% 
+  select(language_code,average_rating) %>% 
+  group_by(language_code) %>% 
+  summarise(num_titles = n(),mean_Av_rating = mean(average_rating)) %>% 
+  arrange (desc(num_titles)) %>% 
+  head(5)
+```
+
+## What are the 5 publishers with most high rated books ?
+
+```{r publisher}
+data %>% 
+  select(publisher,average_rating) %>% 
+  arrange (desc(average_rating)) %>% 
+  head(5)
+```
+
+## which period displays the highest average rating ?
+
+clean publication date
+
+```{r}
+cat("from misc date ")
+data$publication_date[c(8181 ,11099)]
+```
+
+```{r, echo=FALSE}
+cnt = 0
+data$year <- vector(mode = "numeric",length(data$publication_date))
+for (i in 1:length(data$publication_date)){
+#i = 8181
+  date0 <- data$publication_date[i]
+  date0_vect <- str_c(unlist(str_split(date0,"/")))
+    
+  if (date0_vect[1]  %in% c("4","6","9","11") & as.numeric(date0_vect[2]) > 30) {
+    date0 <- str_c(date0_vect[1],"30",date0_vect[3],sep ="-")
+   # day(date0) <- 30
+    
+  }
+  else{
+    date0 <- str_c(date0_vect[1],date0_vect[2],date0_vect[3],sep ="-")  
+  }
+  data$year[i] <- as.numeric(date0_vect[3])
+  data$publication_date[i] <- date0
+cnt = cnt + 1
+}
+
+# check for bad formats records 
+cat("to correct format")
+data$publication_date[c(8181 ,11099)]
+```
+
+## histogram of publication year and numerical summary
+
+```{r}
+hist(data$year,
+     breaks = 100,
+     xlab = "year",
+     main ="publication date year is left skewed")
+```
+
+```{r numerical_summary : year }
+summary(data$year)
+```
+
+In this record, up to 75% of books have been published by 2005.
+
+## note about cat variables
+
+-   we may need to get rid of ID features (booID, isbn, isbn13, authors, publisher).
+-   we may also need to normalize publication_languages wr to eng and/or grc.
+
+## suggestions
+
+-   add more data.
+-   fix unbalanced data with a chosen method.

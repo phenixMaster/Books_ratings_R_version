@@ -1,76 +1,338 @@
 ---
 title: "Books_ratings"
 author: "Christophe"
-date: "`r Sys.Date()`"
-output: html_document
+output:
+  html_document: 
+    toc: yes
+    number_sections: yes
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = F)
 ```
 
-Clear workspace
-```{r}
+
+```{r clear_workspace,eval=FALSE}
 rm(list=ls())
 ```
-load libraries
-```{r}
+
+
+```{r load_libraries,message=FALSE}
 library(tidyverse)
 library(skimr)
+library(lubridate)
 ```
 
-```{r load data, message=FALSE, warning=FALSE}
+```{r load_data, message=FALSE, warning=FALSE}
 data <- read_csv("books.csv")
 ```
 
 data inspection
-```{r}
+
+```{r skim_data, paged.print=FALSE}
 skim(data)
 ```
 
-```{r}
+```{r attach_data, message=FALSE, warning=FALSE}
 attach(data)
 ```
 
-```{r}
-hist(average_rating,breaks = 100)
+
+```{r hist_average_ratings}
+hist(average_rating,breaks = 10, probability  = T)
 ```
-```{r}
+
+
+```{r ecdf_quant_average_ratings}
+Fn_AR <- ecdf(average_rating)
+plot(Fn_AR, main="ecdf average rating")
+```
+
+```{r summary_av_ratings}
 summary(average_rating)
 ```
 
-
-```{r}
+```{r hist_num_pages}
 hist(num_pages,breaks = 100)
+
+```
+
+```{r summary_num_pages}
+summary(num_pages)
+```
+
+```{r hist_text_reviews_pages}
+hist(text_reviews_count, breaks = 50,probability = TRUE)
+
+```
+
+```{r summary_text_reviews_count}
+summary(text_reviews_count)
+```
+
+```{r hist_ratings_count}
+hist(ratings_count, breaks = 50, prob = T)
+```
+
+```{r categorizing_average_ratings, fig.width=7}
+nbClasses = 5
+data$av_cat <- cut(average_rating,breaks = seq(0,5,by = 5/nbClasses),closed = "right", include.lowest = T
+                         )
+ barplot(table(data$av_cat),
+         main = sprintf("categorized average ratings in %d classes",
+                        nbClasses ))
+```
+```{r average rating ecdf}
+Fn_AR <- ecdf(data$av_cat)
+plot(Fn_AR, main = "ecdf average rating", frame = F)
+```
+
+```{r summary_cat_av_ratings}
+table(data$av_cat)
+```
+
+Discretizing average rating in ```r nbClasses``` classes  turn it heavily unbalanced.
+
+```{r proportion_table_in_av_ratings}
+round(prop.table(table(data$av_cat)),3)
+```
+There is  98% chance that a book  is rated between 3 and 5
+
+```{r cum_density }
+cumsum(round(prop.table(table(data$av_cat)),1))
+```
+
+ There is 60% chance that average rating is less than 4.
+
+analysis of categorical variable
+
+```{r select_cat_var, message=FALSE}
+qualitative_data <- data %>% 
+    discard(is.numeric)
+head(qualitative_data)
+```
+number of unique title 
+```{r}
+length(unique(title ))
+```
+
+what are the 5 most rated  titles?
+```{r title}
+data %>% 
+  select(title,average_rating) %>% 
+  group_by(title) %>% 
+  arrange(desc(average_rating)) %>% 
+  head(5)
+```
+
+
+
+number of unique authors
+```{r}
+length(unique(authors))
+```
+What are the five authors with high rated books ?
+```{r authors}
+data %>% 
+  select(authors,average_rating) %>% 
+  group_by(authors) %>% 
+  summarize( mean_avg_rating = mean(average_rating)) %>% 
+  arrange ( desc(mean_avg_rating)) %>% 
+  head(5)
+```
+
+
+What are the 5 languages that occur the most ?
+```{r languages_code}
+data %>% 
+  select(language_code,average_rating) %>% 
+  group_by(language_code) %>% 
+  summarise(num_books_published = n()) %>% 
+  arrange (desc(num_books_published)) %>% 
+  head(5)
+```
+What are the 5 publishers with most high rated books ?
+```{r publisher}
+data %>% 
+  select(publisher,average_rating) %>% 
+  group_by(publisher) %>% 
+  summarize( mean_avg_rating = mean(average_rating)) %>% 
+  arrange (desc(mean_avg_rating)) %>% 
+  head(5)
+```
+Academia press is the most productive publisher. 
+ 
+Which year displays the highest number of book published ?
+check date format
+
+cleaning publication date  first 
+```{r, echo =F,results='hide'}
+data$publication_date[c(8181 ,11099)]
+```
+
+clean publication date
+
+```{r, echo = F,results='hide'}
+cnt = 0
+data$year <- vector(mode = "numeric",length(data$publication_date))
+for (i in 1:length(data$publication_date)){
+#i = 8181
+  date0 <- data$publication_date[i]
+  date0_vect <- str_c(unlist(str_split(date0,"/")))
+    
+  if (date0_vect[1]  %in% c("4","6","9","11") & as.numeric(date0_vect[2]) > 30) {
+    date0 <- str_c(date0_vect[1],"30",date0_vect[3],sep ="-")
+   # day(date0) <- 30
+    
+  }
+  else{
+    date0 <- str_c(date0_vect[1],date0_vect[2],date0_vect[3],sep ="-")  
+  }
+  data$year[i] <- as.numeric(date0_vect[3])
+  data$publication_date[i] <- date0
+cnt = cnt + 1
+}
+
+# check for bad formats records 
+data$publication_date[c(8181 ,11099)]
+```
+```{r, echo = F,results='hide'}
+head(data$publication_date)
+tail(data$publication_date)
+```
+
+```{r hist year1}
+hist(data$year,
+     breaks = 100,
+     xlab = "year",
+     main ="publication date year is left skewed")
+```
+
+```{r hist year 2}
+hist_year <-hist(data$year,
+     breaks = 100,
+     xlim = c(1980,2010),
+     main = "histogram of publication year from 1980",
+     xlab = "year")
+
+
+```
+
+
+```{r year }
+summary(data$year)
+```
+
+
+in this record, 75% of books have been published by 2005.   
+
+```{r}
+data %>% 
+  select(year, average_rating) %>% 
+  group_by(year) %>% 
+  summarize(n_books_published=n()) %>% 
+  arrange(desc(n_books_published),year) %>% 
+  head(5)
+```
+Year 2006 , yields 1700 books published. 
+
+2D EDA 
+
+```{r}
+data %>% 
+  group_by(year) %>% 
+  summarize(num_books_published = n(),avg_rating = mean(average_rating)) %>% 
+  arrange(desc(num_books_published))
+```
+
+```{r year vs av rating}
+data %>% 
+  ggplot(aes(year,average_rating, 
+             color = between(average_rating ,3,4.7) & between(year,1975,2010) )) + 
+  geom_point() +
+  labs(title = "average rating between 3 and 4.7 for years range 1900 to 2020",
+       color = "average rating between 3 and 4.7 and
+       year between 1975 and 2005")
+```
+
+```{r year vs av ratings}
+# categorizing year
+data$year_cat <- cut_width(data$year,width = 9)
+data %>% 
+  ggplot(aes(year_cat, average_rating, 
+             fill = between(average_rating,2.7,4.5))) + geom_boxplot() +
+  labs(y = "average rating") +
+  theme(axis.text.x  = element_text (hjust = -.1, angle = -45))
+```
+
+```{r filter year after 1990}
+data %>% 
+  filter(between(year,1990,2020)) %>% 
+  ggplot(aes(year_cat,average_rating)) + geom_boxplot() +
+  labs(x = "year of publication 1990")
+```
+
+Most books are rated between 2.75 and 4.7.   
+
+```{r}
+data %>% 
+  filter(year >= 1976) %>% 
+  ggplot(aes(year_cat,average_rating)) + geom_boxplot() + 
+  labs(x = "year of publication above 1976")
+```
+
+Across years , most books are rated between 2.7 and 4.5. 
+
+
+```{r}
+data %>% group_by(year) %>% 
+  summarize(across(.cols = c(average_rating,ratings_count),
+                                 funs = mean))
+```
+
+
+select data 
+```{r}
+data_num <- data %>% 
+  keep(is.numeric) %>% 
+  select(-bookID)
+  
 ```
 
 ```{r}
-hist(text_reviews_count, breaks = 50)
+str(data_num)
+```
+```{r}
+skim(data_num)
+```
+split data 
+```{r}
+set.seed(1243)
+index_train0 <- sample(1:(dim(data_num)[1]),round(0.8*(dim(data_num)[1])), replace = F)
+index_train1 <- sample(index_train0,round(0.8*length(index_train0)), replace = F)
+index_val <- sample(index_train0,round(0.2*length(index_train0)), replace = F)
+
+train1 <- data_num[index_train1,]
+valid <- data_num[index_val,]
+test <- data_num[-index_train0,]
+```
+
+
+```{r}
+dim(train1)
+dim(valid)
+dim(test)
 ```
 
 ```{r}
-hist(ratings_count, breaks = 50)
+skim(train1)
+skim(valid)
+skim(test)
 ```
 
+modeling 
 ```{r}
-av_cat <- cut(average_rating,breaks = c(0,2.7,4.5,5),include.lowest = T,
-               right = T)
-plot(av_cat)
-```
-
-```{r}
-summary(av_cat)
-```
-discretising average  rating turn it heavily unbalanced. 
-
-```{r}
-prop.table(table(av_cat))
-```
-
-Above 97% of average rating are between 2.7 and 4.5.  
-
-categorical variable 
-```{r}
-
+# tree
+# rf
 ```
 
