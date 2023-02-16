@@ -1,11 +1,31 @@
 ---
-title: "Books_ratings"
+title: #"Books_ratings"
 author: "Christophe"
 output:
   html_document: 
     toc: yes
     number_sections: yes
 ---
+# Books ratings data analysis 
+## Background / context 
+Book rating is important or critical for books lovers, writers and readers. Very 
+often for some of them,ratings provides the reader with some first insights about
+books and related features like author, publisher, category and guide the reader 
+to buy be tempt or subject to buy a book or not. In this application we have been 
+instructed to predict any given new book ratings  via a machine learning application mean. 
+.    
+
+## summary 
+This application is a supervised machine learning problem. Its could be tackled either as a regression or a classification problem. we would follow the following flow :  
+1 . data acquisition  
+2. data inspection 
+3. Data pre-processing or processing  
+4. EDA : visualization. 
+5. features engineering 
+6 Modelling and machine learning  
+7. model testing and selection
+8. model performance  
+9.  recommendation if necessary  
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = F)
@@ -16,86 +36,115 @@ knitr::opts_chunk$set(echo = F)
 rm(list=ls())
 ```
 
-
+libraries 
 ```{r load_libraries,message=FALSE}
 library(tidyverse)
 library(skimr)
 library(lubridate)
+library(caret)
+library(caretEnsemble)
 ```
 
+## data acquisition
+load data 
 ```{r load_data, message=FALSE, warning=FALSE}
 data <- read_csv("books.csv")
 ```
 
-data inspection
-
+## data inspection
 ```{r skim_data, paged.print=FALSE}
-skim(data)
+summary(skim(data) )
 ```
 
 ```{r attach_data, message=FALSE, warning=FALSE}
 attach(data)
 ```
+## Data preprocessing or processing  
 
-
+## EDA 
+Hist average rating  
 ```{r hist_average_ratings}
 hist(average_rating,breaks = 10, probability  = T)
 ```
-
-
-```{r ecdf_quant_average_ratings}
-Fn_AR <- ecdf(average_rating)
-plot(Fn_AR, main="ecdf average rating")
+Density average rating  
+```{r}
+dens_AR <- density(data$average_rating)
+plot(dens_AR,frame = F,main ="density av raing")
 ```
 
+cdf av rating   
+```{r ecdf_quant_average_ratings}
+Fn_AR <- ecdf(average_rating)
+plot(Fn_AR, main="cdf average rating")
+```
+  
+On average 60% of books have been rated less than  4.  
+average rating is distributed around 4.  
+summary     av rating 
 ```{r summary_av_ratings}
 summary(average_rating)
 ```
 
+num pages  
 ```{r hist_num_pages}
 hist(num_pages,breaks = 100)
 
 ```
 
+summary num pages  
 ```{r summary_num_pages}
 summary(num_pages)
 ```
 
+hist text reviews  
 ```{r hist_text_reviews_pages}
 hist(text_reviews_count, breaks = 50,probability = TRUE)
 
 ```
 
+summary text reviews  
 ```{r summary_text_reviews_count}
 summary(text_reviews_count)
 ```
 
+hist ratings counts  
 ```{r hist_ratings_count}
 hist(ratings_count, breaks = 50, prob = T)
 ```
+summary ratings count  
+```{r}
+summary(data$ratings_count)
+```
 
-```{r categorizing_average_ratings, fig.width=7}
+Discretized average rating  
+```{r categorizing_average_ratings}
 nbClasses = 5
 data$av_cat <- cut(average_rating,breaks = seq(0,5,by = 5/nbClasses),closed = "right", include.lowest = T
                          )
  barplot(table(data$av_cat),
          main = sprintf("categorized average ratings in %d classes",
                         nbClasses ))
-```
+```   
+
+Discrete average rating ecdf  
 ```{r average rating ecdf}
 Fn_AR <- ecdf(data$av_cat)
-plot(Fn_AR, main = "ecdf average rating", frame = F)
-```
-
+plot(Fn_AR, main = "cdf categorized average rating", frame = F)
+```  
+  
+D. av rating frequencies table  
 ```{r summary_cat_av_ratings}
 table(data$av_cat)
 ```
 
-Discretizing average rating in ```r nbClasses``` classes  turn it heavily unbalanced.
+Discretizing average rating in ```r nbClasses``` classes  turn it heavily unbalanced.  
 
+Density table D. Av rating   
 ```{r proportion_table_in_av_ratings}
 round(prop.table(table(data$av_cat)),3)
 ```
+
+
 There is  98% chance that a book  is rated between 3 and 5
 
 ```{r cum_density }
@@ -108,14 +157,20 @@ analysis of categorical variable
 
 ```{r select_cat_var, message=FALSE}
 qualitative_data <- data %>% 
-    discard(is.numeric)
+    discard(is.numeric) 
 head(qualitative_data)
 ```
+
+qualitative data names
+```{r}
+names(qualitative_data)
+```
+
 number of unique title 
 ```{r}
 length(unique(title ))
 ```
-
+  
 what are the 5 most rated  titles?
 ```{r title}
 data %>% 
@@ -125,12 +180,11 @@ data %>%
   head(5)
 ```
 
-
-
 number of unique authors
 ```{r}
 length(unique(authors))
 ```
+
 What are the five authors with high rated books ?
 ```{r authors}
 data %>% 
@@ -293,18 +347,30 @@ data %>% group_by(year) %>%
 
 select data 
 ```{r}
-data_num <- data %>% 
+data_num0<- data %>% 
   keep(is.numeric) %>% 
-  select(-bookID)
-  
+  select(-c(bookID,average_rating,year)) %>% 
+  apply(FUN = function(x) x/max(x),MARGIN = 2) %>% 
+  as_tibble
+data_num <- cbind(data_num0,
+                  average_rating = data$average_rating,
+                  year = data$year)  
 ```
 
 ```{r}
-str(data_num)
+head(data_num)
 ```
+```{r}
+hist(data_num$ratings_count ,probability  = T)
+```
+
 ```{r}
 skim(data_num)
 ```
+
+
+We could normalize data to diminish the effect of magnitude in some numeric variables. 
+
 split data 
 ```{r}
 set.seed(1243)
@@ -317,20 +383,24 @@ valid <- data_num[index_val,]
 test <- data_num[-index_train0,]
 ```
 
-
+split data inspection
 ```{r}
 dim(train1)
 dim(valid)
 dim(test)
 ```
 
-```{r}
-skim(train1)
-skim(valid)
-skim(test)
-```
+## features engineering 
+- Removes some features without variation or. very low variation.
 
-modeling 
+
+## modelling testing and selection   
+- Test some models and make a choice to finalize our study.   
+
+## model performance    
+
+## recommendation if necessary  
+
 ```{r}
 # tree
 # rf
