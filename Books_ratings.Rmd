@@ -11,21 +11,22 @@ output:
 Book rating is important or critical for books lovers, writers and readers. Very 
 often for some of them,ratings provides the reader with some first insights about
 books and related features like author, publisher, category and guide the reader 
-to buy be tempt or subject to buy a book or not. In this application we have been 
+to buy, be tempt to or subject to buy a book or not. In this application we have been 
 instructed to predict any given new book ratings  via a machine learning application mean. 
 .    
 
 ## summary 
 This application is a supervised machine learning problem. Its could be tackled either as a regression or a classification problem. we would follow the following flow :  
-1 . data acquisition  
-2. data inspection 
+1 . data acquisition   
+2. data inspection  
 3. Data pre-processing or processing  
-4. EDA : visualization. 
-5. features engineering 
+4. EDA : visualization  
+5. features engineering  
 6 Modelling and machine learning  
-7. model testing and selection
+7. model testing and selection  
 8. model performance  
-9.  recommendation if necessary  
+9. prediction 
+10. recommendation  
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = F)
@@ -69,7 +70,7 @@ hist(average_rating,breaks = 10, probability  = T)
 Density average rating  
 ```{r}
 dens_AR <- density(data$average_rating)
-plot(dens_AR,frame = F,main ="density av raing")
+plot(dens_AR,frame = F,main ="density av raing",xlab ="average rating")
 ```
 
 cdf av rating   
@@ -80,12 +81,12 @@ plot(Fn_AR, main="cdf average rating")
   
 On average 60% of books have been rated less than  4.  
 average rating is distributed around 4.  
-summary     av rating 
+summary av rating  
 ```{r summary_av_ratings}
 summary(average_rating)
 ```
 
-num pages  
+num pages   
 ```{r hist_num_pages}
 hist(num_pages,breaks = 100)
 
@@ -107,16 +108,17 @@ summary text reviews
 summary(text_reviews_count)
 ```
 
-hist ratings counts  
+hist ratings counts   
 ```{r hist_ratings_count}
 hist(ratings_count, breaks = 50, prob = T)
 ```
+
 summary ratings count  
 ```{r}
 summary(data$ratings_count)
 ```
 
-Discretized average rating  
+Let's discretize  average rating  
 ```{r categorizing_average_ratings}
 nbClasses = 5
 data$av_cat <- cut(average_rating,breaks = seq(0,5,by = 5/nbClasses),closed = "right", include.lowest = T
@@ -132,14 +134,14 @@ Fn_AR <- ecdf(data$av_cat)
 plot(Fn_AR, main = "cdf categorized average rating", frame = F)
 ```  
   
-D. av rating frequencies table  
+Discrete average rating frequencies table  
 ```{r summary_cat_av_ratings}
 table(data$av_cat)
 ```
 
 Discretizing average rating in ```r nbClasses``` classes  turn it heavily unbalanced.  
 
-Density table D. Av rating   
+Density table Discrete Average rating   
 ```{r proportion_table_in_av_ratings}
 round(prop.table(table(data$av_cat)),3)
 ```
@@ -151,7 +153,7 @@ There is  98% chance that a book  is rated between 3 and 5
 cumsum(round(prop.table(table(data$av_cat)),1))
 ```
 
- There is 60% chance that average rating is less than 4.
+There is 60% chance that average rating is less than or equal to 4. 
 
 analysis of categorical variable
 
@@ -161,17 +163,17 @@ qualitative_data <- data %>%
 head(qualitative_data)
 ```
 
-qualitative data names
+qualitative data names.  
 ```{r}
 names(qualitative_data)
 ```
 
-number of unique title 
+number of unique title  
 ```{r}
 length(unique(title ))
 ```
   
-what are the 5 most rated  titles?
+what are the 5 most rated  titles?  
 ```{r title}
 data %>% 
   select(title,average_rating) %>% 
@@ -180,7 +182,7 @@ data %>%
   head(5)
 ```
 
-number of unique authors
+number of unique authors. 
 ```{r}
 length(unique(authors))
 ```
@@ -217,7 +219,7 @@ data %>%
 Academia press is the most productive publisher. 
  
 Which year displays the highest number of book published ?
-check date format
+Let's check date format
 
 cleaning publication date  first 
 ```{r, echo =F,results='hide'}
@@ -274,24 +276,22 @@ hist_year <-hist(data$year,
 
 
 ```{r year }
+data %>% 
+  group_by(year) %>% 
+  summarise(counts = n()) %>% 
+  arrange(desc(counts)) %>% 
+  head(1)
+
 summary(data$year)
 ```
 
 
-in this record, 75% of books have been published by 2005.   
+Year 2006 yields the  highest number of publications i.e. 1700. However, in this record, 75% of books have been published by 2005.   
 
-```{r}
-data %>% 
-  select(year, average_rating) %>% 
-  group_by(year) %>% 
-  summarize(n_books_published=n()) %>% 
-  arrange(desc(n_books_published),year) %>% 
-  head(5)
-```
-Year 2006 , yields 1700 books published. 
 
 2D EDA 
 
+What is the number of book published by year and their associated average rating  
 ```{r}
 data %>% 
   group_by(year) %>% 
@@ -299,6 +299,7 @@ data %>%
   arrange(desc(num_books_published))
 ```
 
+how is average rating distributed across the years?  
 ```{r year vs av rating}
 data %>% 
   ggplot(aes(year,average_rating, 
@@ -309,16 +310,18 @@ data %>%
        year between 1975 and 2005")
 ```
 
+In which years do average rating fall in the range of 2.7 and 4.5?    
 ```{r year vs av ratings}
 # categorizing year
 data$year_cat <- cut_width(data$year,width = 9)
 data %>% 
   ggplot(aes(year_cat, average_rating, 
              fill = between(average_rating,2.7,4.5))) + geom_boxplot() +
-  labs(y = "average rating") +
+  labs(y = "average rating",fill = "average rating range") +
   theme(axis.text.x  = element_text (hjust = -.1, angle = -45))
 ```
 
+In which range did average rating fall between 1990 and 2020?  
 ```{r filter year after 1990}
 data %>% 
   filter(between(year,1990,2020)) %>% 
@@ -364,12 +367,30 @@ head(data_num)
 hist(data_num$ratings_count ,probability  = T)
 ```
 
-```{r}
-skim(data_num)
+```{r paged.print=TRUE}
+#skim(data_num)
+dim(data)
+dim(data_num)
 ```
 
 
-We could normalize data to diminish the effect of magnitude in some numeric variables. 
+IMPORTATNT : We could normalize data by their maximum to diminish the effect of
+magnitude in some numeric variables. 
+normalize numeric data 
+```{r,eval=T}
+data_num <- data_num %>% 
+  select(c(num_pages,ratings_count,text_reviews_count)) %>% 
+  apply(.,FUN = scale,MARGIN = 2) %>% 
+  cbind(year = data_num$year,average_rating = data_num$average_rating) %>% 
+  as.data.frame()
+head(data_num)
+```
+
+## features engineering 
+- Removes some features without variation or. very low variation or without any relation. with average ratings.   
+hypothesis testing : here we test the relationship between average rating and num variables   
+H0 : there is no relationship between average_rating and numerical variables   
+H1 : there is a relationship between average_ratings and numerical variables. 
 
 split data 
 ```{r}
@@ -377,25 +398,65 @@ set.seed(1243)
 index_train0 <- sample(1:(dim(data_num)[1]),round(0.8*(dim(data_num)[1])), replace = F)
 index_train1 <- sample(index_train0,round(0.8*length(index_train0)), replace = F)
 index_val <- sample(index_train0,round(0.2*length(index_train0)), replace = F)
+```
 
+
+```{r}
 train1 <- data_num[index_train1,]
 valid <- data_num[index_val,]
 test <- data_num[-index_train0,]
 ```
 
-split data inspection
 ```{r}
-dim(train1)
-dim(valid)
-dim(test)
+broom::tidy(lm(average_rating~. , train1)) %>% 
+  filter(p.value <= 0.05)
+```
+For ratings_count, text_reviews_count, year , the p-values are > 
+0.05. We reject H1 for some variables as they have  no relationship with average_rating and keep num_pages.  
+
+```{r,eval = F}
+data_num <- data %>% 
+  select(num_pages)
 ```
 
-## features engineering 
-- Removes some features without variation or. very low variation.
+```{r data2}
+data2 <- data_num %>% 
+  #discard(is.numeric) %>% 
+  #cbind(num_pages = data_num$num_pages,average_rating = data$average_rating) %>% 
+  select(-c(contains(c("ID","title","isbn","pub","auth","year","cat"))))
 
+head(data2)
+```
+refactor language code 
+```{r}
+data2$language_code<- ifelse(str_detect(toupper(data$language_code),toupper("eng")),1,0)
+```
+
+
+```{r}
+table(data2$language_code)
+```
+
+```{r}
+broom::tidy(summary(lm(average_rating~. , data2)) ) %>% 
+  filter(p.value <= 0.05)
+```
+```{r}
+data3 <- data %>% 
+  #discard(is.numeric) %>% 
+  #cbind(num_pages = data_num$num_pages,average_rating = data$average_rating) %>% 
+  select(-c(contains(c("ID","title","isbn","pub","auth","year","average"))))
+```
+
+split data again
 
 ## modelling testing and selection   
-- Test some models and make a choice to finalize our study.   
+- Test some models and make a choice to finalize our study. 
+- test categorical average rating.  
+```{r}
+
+randomForest::randomForest (av_cat~., data3 )
+```
 
 ## model performance    
 
